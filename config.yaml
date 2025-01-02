@@ -1,0 +1,22 @@
+name: "Tesla CPO Inventory Monitor"
+version: "0.0.23"
+slug: "tesla_cpo_inventory_tracker"
+description: "Monitors Tesla CPO inventory for specific VIN(s)"
+init: false
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+options:
+  vins: null
+  interval: 15
+  notify_service: null
+  IP_ADDRESS: null
+schema:
+  vins:
+    - str
+  interval: int(1,20)
+  notify_service: str
+  IP_ADDRESS: str
