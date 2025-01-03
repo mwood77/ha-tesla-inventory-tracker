@@ -1,5 +1,5 @@
 name: "Tesla CPO Inventory Monitor"
-version: "0.0.23"
+version: "0.0.46"
 slug: "tesla_cpo_inventory_tracker"
 description: "Monitors Tesla CPO inventory for specific VIN(s)"
 init: false
@@ -10,13 +10,28 @@ arch:
   - armv7
   - i386
 options:
-  vins: null
-  interval: 15
-  notify_service: null
-  IP_ADDRESS: null
+  vins: 
+    - LRW3E7EL3PC666768
+  interval: 1
+  devices_to_notify: 
+    - mobile_app_mick_iphone
+    - mobile_app_wood_ipad
+  test_notification: false
 schema:
   vins:
     - str
   interval: int(1,20)
-  notify_service: str
-  IP_ADDRESS: str
+  devices_to_notify:
+    - str
+  test_notification: bool
+url: "https://github.com/mwood77/ha-tesla-inventory-tracker"
+icon: mdi:car-arrow-right
+
+stage: stable
+ingress: false
+hassio_api: true
+hassio_role: default
+homeassistant_api: true
+homeassistant: true
+host_network: true
+auth_api: true

@@ -1,14 +1,24 @@
 const axios = require("axios");
-const { log, time } = require("console");
 const sqlite3 = require("sqlite3").verbose();
 const fs = require("fs");
 const yaml = require('js-yaml');
 const path = require("path");
 
-// Configuration
 const CONFIG_PATH = "/data/options.json"; // Default add-on configuration path
 const DB_PATH = "/data/tesla_cpo.db";
-const IP_ADDRESS = process.env.HASSIO_IP_ADDRESS || "localhost";
+
+const consoleColours = {
+  cyan: '\x1b[36m%s\x1b[0m',
+  red: '\x1b[31m%s\x1b[0m',
+  green: '\x1b[32m%s\x1b[0m',
+  yellow: '\x1b[33m%s\x1b[0m',
+  magenta: '\x1b[35m%s\x1b[0m',
+}
+
+const market = "NL";
+const region = "NL";
+const language = "nl";
+const postalCode = "3812 JE";
 
 const URL = 'https://www.tesla.com/inventory/api/v4/inventory-results';
 const teslaV4ApiQuery = {
@@ -18,19 +28,24 @@ const teslaV4ApiQuery = {
     "options": {
       "TRIM": [
         "PAWD",
-        "LRAWD"
+        "LRAWD",
+        "LRRWD",
+        "MRRWD",
+        "M3RWD",
+        "SRRWD",
+        "MYAWD",
       ]
     },
     "arrangeby": "Price",
     "order": "asc",
-    "market": "NL",
-    "language": "nl",
+    "market": market,
+    "language": language,
     "super_region": "north america",
     "lng": 5.3849,
     "lat": 52.1592,
-    "zip": "3811",
+    "zip": postalCode,
     "range": 0,
-    "region": "NL"
+    "region": region,
   },
   "offset": 0,
   "count": 100,
@@ -40,24 +55,53 @@ const teslaV4ApiQuery = {
   "version": null
 };
 
+const composeTeslaCarListingUrl = (vin) => {
+  return `https://www.tesla.com/${language}_${market}/m3/order/${vin}`;
+};
+
 
 // Send notification via Home Assistant
-const sendNotification = async (notifyService, message) => {
+const sendNotification = async (device, message, vin) => {
   const supervisorToken = process.env.SUPERVISOR_TOKEN;
-  const url = `http://${IP_ADDRESS}:8123/core/api/services/${notifyService}`;
 
-  // @todo - set auth token or something
+  if (!supervisorToken) {
+    logErrorMessage("sendNotification", "Supervisor token not found.");
+    return;
+  }
+
+  const url = `http://supervisor/core/api/services/notify/${device}`;
+
+  const payload = {
+    title: "Tesla CPO Monitor",
+    message,
+    data: vin ? { url: composeTeslaCarListingUrl(vin) } : null
+  }
 
   try {
     await axios.post(
       url,
-      { message },
-      { headers: { Authorization: `Bearer ${supervisorToken}` } }
+      payload,
+      { headers: 
+        { 
+          "Authorization": `Bearer ${supervisorToken}`,
+          "Content-Type": "application/json"
+        }
+      }
     );
   } catch (error) {
     logErrorMessage("sendNotification", `Error sending notification: ${error.message}`);
   }
 };
+
+const loadYamlVersion = () => {
+  try {
+    const fileContents = fs.readFileSync(path.resolve(__dirname, 'config.yaml'), 'utf8');
+    const data = yaml.load(fileContents);
+    return data;
+  } catch (error) {
+    logErrorMessage("loadYamlVersion", `Failed to load yaml configuration for version: ${error.message}`);
+  }
+}
 
 const loadConfig = () => {
   if (!fs.existsSync(CONFIG_PATH)) {
@@ -110,6 +154,21 @@ const fetchCpoData = async (config) => {
     logMessage("fetchCpoData", `Fetched ${vehicles.length} matching vehicles from Tesla CPO API.`);
     logMessage("fetchCpoData", `Matched Vehicles: ${JSON.stringify(vehicles)}`);
 
+    // Send test notification with results
+    if (config.test_notification) {
+      config.devices_to_notify.forEach((device) => {
+        sendNotification(
+          device,
+          `Fetched ${vehicles.length} matching vehicles from Tesla CPO API.\n\nWant to stop receiving this test notifications? Disbale 'test_notification' in the addon's configuration.`,
+          config.vins[0]
+        );
+        sendNotification(
+          device,
+          `Stop receiving these test notifications by disbaling 'test_notification' in the addon's configuration.`
+        );
+      });
+    }
+
     return vehicles;
   } catch (error) {
     logErrorMessage("fetchCpoData", `Something went wrong: ${error.message}, #error: ${error}`);
@@ -119,17 +178,15 @@ const fetchCpoData = async (config) => {
 
 // Monitor VIN
 const monitorVins = (config, db) => {
-  const { vins, interval, notify_service: notifyService } = config;
+  const { vins, interval, devices_to_notify: devices } = config;
 
-  if (!vins || !interval || !notifyService) {
+  if (!vins || !interval || !devices) {
     logErrorMessage("monitorVins", "Configuration is missing required fields.");
     return;
   }
 
   setInterval(async () => {
     const vehicles = await fetchCpoData(config);
-
-    console.log("Vehicles at setInterval(): " + JSON.stringify(vehicles));
 
     // Process each vehicle
     vehicles.forEach(({ VIN, price }) => {
@@ -142,10 +199,13 @@ const monitorVins = (config, db) => {
         if (row) {
           const lastPrice = row.price;
           if (price !== lastPrice) {
-            sendNotification(
-              notifyService,
-              `Tesla VIN ${VIN}: Price changed from $${lastPrice} to $${price}.`
-            );
+            devices.forEach((device) => {
+              sendNotification(
+                device,
+                `Tesla VIN ${VIN}: Price changed from $${lastPrice} to $${price}.`,
+                VIN
+              );
+            });
             db.run(
               "UPDATE vehicle SET price = ?, last_updated = ? WHERE vin = ?",
               [price, new Date().toISOString(), VIN]
@@ -172,10 +232,12 @@ const monitorVins = (config, db) => {
 
           if (row) {
             db.run("DELETE FROM vehicle WHERE vin = ?", [VIN]);
-            sendNotification(
-              notifyService,
-              `Tesla VIN ${VIN} is no longer available.`
-            );
+            devices.forEach((device) => {
+              sendNotification(
+                device,
+                `Tesla VIN ${VIN} is no longer available.`
+              );
+            });
           }
         });
       }
@@ -183,24 +245,35 @@ const monitorVins = (config, db) => {
   }, interval * 60 * 1000);
 };
 
-const logMessage = (functionName, message) => {
-  const currentTime = new Date().toISOString(); // Get the current time in ISO format
-  console.log(`[${currentTime}] [${functionName}] ${message}`);
+const logMessage = (functionName, message, bootMessage) => {
+  const currentTime = new Date().toISOString();
+  if (bootMessage) {
+    console.log(consoleColours.green, `[${currentTime}] [${functionName}] ${message}`);
+  } else {
+    console.log(`[${currentTime}] [${functionName}] ${message}`);
+  }
 };
 
 const logErrorMessage = (functionName, message) => {
-  const currentTime = new Date().toISOString(); // Get the current time in ISO format
-  console.error(`[${currentTime}] [${functionName}] - ERROR - ${message}`);
+  const currentTime = new Date().toISOString();
+  console.error(consoleColours.red ,`[${currentTime}] [${functionName}] - ERROR - ${message}`);
 };
 
 // Main function
 const main = () => {
+  const addOnConfig = loadYamlVersion();
+  
+  logMessage("main", "===============================================", true);
+  logMessage("main", "Starting Tesla CPO monitor...", true);
+  logMessage("main", `Version: ${addOnConfig.version}`, true);
+  logMessage("main", "Written by: @mwood77", true);
+  logMessage("main", "Found a bug? Report it here: https://github.com/mwood77/ha-tesla-inventory-tracker/issues", true);
+  logMessage("main", "===============================================", true);
+
   const config = loadConfig();
   const db = initDb();
 
   monitorVins(config, db);
 };
-
-logMessage("main", "Starting Tesla CPO monitor...");
 
 main();
