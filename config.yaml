@@ -1,5 +1,5 @@
 name: "Tesla CPO Inventory Monitor"
-version: "0.0.46"
+version: "0.0.74"
 slug: "tesla_cpo_inventory_tracker"
 description: "Monitors Tesla CPO inventory for specific VIN(s)"
 init: false
@@ -10,14 +10,27 @@ arch:
   - armv7
   - i386
 options:
-  vins: 
-    - LRW3E7EL3PC666768
-  interval: 1
-  devices_to_notify: 
-    - mobile_app_mick_iphone
-    - mobile_app_wood_ipad
+  market: str
+  region: str
+  language: str
+  postalCode: str
+  models: 
+    - "Model S"
+    - "Model 3"
+    - "Model X"
+    - "Model Y"
+    - "Cybertruck"
+  vins: null
+  interval: 15
+  devices_to_notify: null
   test_notification: false
 schema:
+  market: str
+  region: str
+  language: str
+  postalCode: str
+  models:
+    - str
   vins:
     - str
   interval: int(1,20)
