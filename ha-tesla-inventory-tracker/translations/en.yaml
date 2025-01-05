@@ -1,38 +1,38 @@
 ---
 configuration:
-  market: 
-    name: Market
-    description: >-
-      Choose the market to monitor.
-  region: 
-    name: Region
-    description: >-
-      Choose the region to monitor.
-  language: 
-    name: Language
-    description: >-
-      Choose the language to use for the inventory.
-  postalCode:
-    name: Postal Code
-    description: >-
-      Enter your postal code for the region you want to monitor.
-  models:
-    name: Models
-    description: >-
-      Choose the vehicle model(s) to monitor; if you're interested in multiple models, you can select more than one.
-  vins:
-    name: VINs
-    description: >-
-      Enter the VIN(s) of the vehicle(s) you want to monitor. If you're interested in multiple vehicles you can enter more than one VIN. Make sure you select the appropriate model(s) above.
-  interval:
-    name: Polling Interval in Minutes
-    description: >-
-      Choose how often to check Tesla's inventory for changes. The default is 15 minutes.
-  devices_to_notify:
-    name: Devices to Notify
-    description: >-
-      Choose the devices you want to receive notifications when a watched inventory item's pricing is changed. This is usually your mobile device(s) with the Home Assistant app installed.
-  test_notification:
-    name: Test Notification
-    description: >-
-      Enable this to send a test notification, on every inventory search, to the devices you've selected to receive notifications. 
+    market:
+        name: Market
+        description: >-
+            Choose the market to monitor.
+    region:
+        name: Region
+        description: >-
+            Choose the region to monitor.
+    language:
+        name: Language
+        description: >-
+            Choose the language to use for the inventory.
+    postalCode:
+        name: Postal Code
+        description: >-
+            Enter your postal code for the region you want to monitor.
+    models:
+        name: Models
+        description: >-
+            Choose the vehicle model(s) to monitor; if you're interested in multiple models, you can select more than one.
+    vins:
+        name: VINs
+        description: >-
+            Enter the VIN(s) of the vehicle(s) you want to monitor. If you're interested in multiple vehicles you can enter more than one VIN. Make sure you select the appropriate model(s) above.
+    interval:
+        name: Polling Interval in Minutes
+        description: >-
+            Choose how often to check Tesla's inventory for changes. The default is 15 minutes.
+    devices_to_notify:
+        name: Devices to Notify
+        description: >-
+            Choose the devices you want to receive notifications when a watched inventory item's pricing is changed. This is usually your mobile device(s) with the Home Assistant app installed.
+    test_notification:
+        name: Test Notification
+        description: >-
+            Enable this to send a test notification, on every inventory search, to the devices you've selected to receive notifications.
