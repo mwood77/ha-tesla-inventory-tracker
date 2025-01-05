@@ -16,30 +16,5 @@
         "js-yaml": "4.1.0",
         "prettier": "^3.4.2",
         "sqlite3": "^5.1.6"
-    },
-    "prettier": {
-        "trailingComma": "es5",
-        "tabWidth": 4,
-        "semi": false,
-        "singleQuote": true
-    },
-    "eslintConfig": {
-        "env": {
-          "browser": true,
-          "node": true,
-          "es2021": true
-        },
-        "extends": "airbnb-base",
-        "parserOptions": {
-          "ecmaVersion": 12,
-          "sourceType": "module"
-        },
-        "rules": {
-          "no-console": "warn",
-          "eqeqeq": "error",
-          "indent": ["error", 2],
-          "semi": ["error", "always"],
-          "quotes": ["error", "single"]
-        }
-      }
+    }
 }
