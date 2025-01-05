@@ -22,8 +22,8 @@ jobs:
         with:
           node-version-file: ha-tesla-inventory-tracker/.nvmrc
 
-      # ESLint and Prettier must be in `package.json`
       - name: Install Node.js dependencies
+        working-directory: ha-tesla-inventory-tracker
         run: npm ci
 
       - name: Lint Action
