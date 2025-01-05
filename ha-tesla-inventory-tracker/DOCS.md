@@ -8,11 +8,6 @@
 1. On Tesla's website, navigate to *Vehicles*, then to their *Certified Used Vehicles* inventory. The wording might be different depending on regional differences.
 1. Now find a car you wish to track.
 1. When you've found a car, open the listing and look at the URL:
-<<<<<<< HEAD
-    <!-- - ![Tesla inventory item with arrows showing region, language, and vin](images/tesla_url_inventory_edited.png) -->
-    - Generally, Tesla's URLs are composed in the following format: 
-        - `https://www.tesla.com/{LANGUAGE}_{REGION}/{MODEL}/order/{VIN}`
-=======
     <!-- - ![Tesla inventory item with arrows showing region, language, and vin](images/tesla_url_inventory_edited.png) --> 
     - `https://www.tesla.com/{LANGUAGE}_{REGION}/{MODEL}/order/{VIN}`
         - For example, let's decode this URL `https://www.tesla.com/nl_NL/m3/order/5YJ3E7EB8KF544252`
@@ -22,16 +17,11 @@
             - `5YJ3E7EB8KF544252` is the vehicle's **VIN**
             - **Note**, if a `?` comes after the **VIN** (for example `.../m3/order/5YJ3E7EB8KF544252?postalCode=90210&coord=....`) you can safely remove everything that comes after the `?` including the `?`
         
->>>>>>> 612fe6cb792369ca7db0dc48fc4742048a2883a0
     - You'll need to remember the *Language* and *Region* from the URL prior to starting the add-on.
 1. Go to the add-on's configuration and input the values for *Language* and *Region* into their appropriate fields.
 1. Lastly, the add-on's configuration field, *Market*, is generally the same value as *Region*. So enter that value there too.
 1. Now add your *Postal Code*
-<<<<<<< HEAD
-1. Now add which *Models* you wish to track; accepted values are:
-=======
 1. Now add or remove which *Models* you wish to track; accepted values are:
->>>>>>> 612fe6cb792369ca7db0dc48fc4742048a2883a0
     - `Model S`
     - `Model 3`
     - `Model X`
