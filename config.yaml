@@ -1,5 +1,5 @@
 name: "Tesla CPO Inventory Tracker"
-version: "0.1.85-rc"
+version: "0.1.86-rc"
 slug: "tesla_cpo_inventory_tracker"
 description: "Monitors Tesla's CPO inventory for specific VIN(s) and sends notifications when a watched inventory item's pricing is changed"
 image: ghcr.io/mwood77/ha-tesla-cpo-inventory-tracker_{arch}
