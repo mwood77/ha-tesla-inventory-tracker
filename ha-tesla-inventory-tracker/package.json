@@ -1,6 +1,6 @@
 {
     "name": "tesla_cpo_inventory_tracker",
-    "version": "0.0.2",
+    "version": "1.0.0",
     "description": "Monitor Tesla CPO inventory by VIN(s) for price and availability changes",
     "main": "index.js",
     "dependencies": {

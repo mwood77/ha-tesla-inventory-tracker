@@ -1,0 +1,49 @@
+name: "Tesla CPO Inventory Tracker"
+version: "0.1.85-rc"
+slug: "tesla_cpo_inventory_tracker"
+description: "Monitors Tesla's CPO inventory for specific VIN(s) and sends notifications when a watched inventory item's pricing is changed"
+image: ghcr.io/mwood77/ha-tesla-cpo-inventory-tracker_{arch}
+init: false
+arch:
+  - aarch64
+  - amd64
+  - armhf
+  - armv7
+  - i386
+options:
+  market: null
+  region: null
+  language: null
+  postalCode: null
+  models:
+    - Model S
+    - Model 3
+    - Model X
+    - Model Y
+    - Cybertruck
+  vins: null
+  interval: 
+    - 15
+  devices_to_notify: null
+  test_notification: false
+schema:
+  market: str
+  region: str
+  language: str
+  postalCode: str
+  models: 
+    - str
+  vins: 
+    - str
+  interval: list(5|15|30|60)
+  devices_to_notify:
+    - str
+  test_notification: bool
+url: "https://github.com/mwood77/ha-tesla-inventory-tracker"
+icon: mdi:car-arrow-right
+
+stage: stable
+ingress: false
+hassio_api: true
+homeassistant_api: true
+auth_api: true

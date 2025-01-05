@@ -6,6 +6,7 @@ const path = require("path");
 
 const CONFIG_PATH = "/data/options.json"; // Default add-on configuration path
 const DB_PATH = "/data/tesla_cpo.db";
+let globalConfig = {};
 
 const consoleColours = {
   cyan: '\x1b[36m%s\x1b[0m',
@@ -15,53 +16,65 @@ const consoleColours = {
   magenta: '\x1b[35m%s\x1b[0m',
 }
 
-const market = "NL";
-const region = "NL";
-const language = "nl";
-const postalCode = "3812 JE";
-
 const URL = 'https://www.tesla.com/inventory/api/v4/inventory-results';
-const teslaV4ApiQuery = {
-  "query": {
-    "model": "m3",
-    "condition": "used",
-    "options": {
-      "TRIM": [
-        "PAWD",
-        "LRAWD",
-        "LRRWD",
-        "MRRWD",
-        "M3RWD",
-        "SRRWD",
-        "MYAWD",
-      ]
+
+const composeUrlQuery = (model, market, language, postalCode, region) => {
+
+  let queryParams = {
+    "query": {
+      "model": model,
+      "condition": "used",
+      "arrangeby": "Price",
+      "order": "asc",
+      "market": market.toUpperCase().trim(),
+      "language": language.toLowerCase().trim(),
+      "super_region": "north america",
+      "zip": postalCode.trim(),
+      "range": 0,
+      "region": region.toUpperCase().trim(),
     },
-    "arrangeby": "Price",
-    "order": "asc",
-    "market": market,
-    "language": language,
-    "super_region": "north america",
-    "lng": 5.3849,
-    "lat": 52.1592,
-    "zip": postalCode,
-    "range": 0,
-    "region": region,
-  },
-  "offset": 0,
-  "count": 100,
-  "outsideOffset": 0,
-  "outsideSearch": false,
-  "isFalconDeliverySelectionEnabled": false,
-  "version": null
+    "offset": 0,
+    "count": 100,
+    "outsideOffset": 0,
+    "outsideSearch": false,
+    "isFalconDeliverySelectionEnabled": false,
+    "version": null
+  };
+  
+  return queryParams;
+}
+
+function getMappedModels(model) {
+
+  const trimmedModel = model.toLowerCase().trim();
+  let sanitizedUserInput;
+
+  if (trimmedModel.includes(" ")) {
+    sanitizedUserInput = trimmedModel.split(" ")[1];
+
+    if (sanitizedUserInput === "truck") {
+      sanitizedUserInput = "cybertruck";
+    }
+  }
+
+  const MODEL_MAPPING = {
+    "s": "ms",
+    "3": "m3",
+    "x": "mx",
+    "y": "my",
+    "cybertruck": "ct"
+  };
+
+  return MODEL_MAPPING[sanitizedUserInput];
 };
 
-const composeTeslaCarListingUrl = (vin) => {
-  return `https://www.tesla.com/${language}_${market}/m3/order/${vin}`;
+const composeTeslaCarListingUrl = (vin, model) => {
+  return `https://www.tesla.com/${globalConfig.language}_${globalConfig.market}/${getMappedModels(model)}/order/${vin}`;
 };
 
 
 // Send notification via Home Assistant
-const sendNotification = async (device, message, vin) => {
+const sendNotification = async (device, message, vin, model) => {
   const supervisorToken = process.env.SUPERVISOR_TOKEN;
 
   if (!supervisorToken) {
@@ -70,11 +83,19 @@ const sendNotification = async (device, message, vin) => {
   }
 
   const url = `http://supervisor/core/api/services/notify/${device}`;
+  let payload;
 
-  const payload = {
-    title: "Tesla CPO Monitor",
-    message,
-    data: vin ? { url: composeTeslaCarListingUrl(vin) } : null
+  if (vin && model) {
+    payload = {
+      title: "Tesla CPO Monitor",
+      message,
+      data: { url: composeTeslaCarListingUrl(vin, model) }
+    }
+  } else {
+    payload = {
+      title: "Tesla CPO Inventory Tracker",
+      message
+    }
   }
 
   try {
@@ -90,6 +111,7 @@ const sendNotification = async (device, message, vin) => {
     );
   } catch (error) {
     logErrorMessage("sendNotification", `Error sending notification: ${error.message}`);
+    logErrorMessage("sendNotification", `Sending notification: ${JSON.stringify(payload)}`);
   }
 };
 
@@ -132,56 +154,76 @@ const initDb = () => {
 
 // Fetch Tesla CPO data
 const fetchCpoData = async (config) => {
-  const composedURL = URL + '?query=' + JSON.stringify(teslaV4ApiQuery);
-  try {
-    const response = await axios.get(composedURL, { headers: {'User-Agent':'Mozilla/5.0'}, timeout: 5000 });
-    const inventory = response.data.results;
 
-    if (config.vins.length === 0) {
-      logErrorMessage("fetchCpoData", "No VINs to monitor.");
+  const availableVehicles = [];
+  const constructedUrls = [];
+
+  config.models.forEach((model) => {
+    logMessage("fetchCpoData", `Creating query for: ${model}`);
+    const mappedModel = getMappedModels(model);
+    const teslaV4ApiQuery = composeUrlQuery(mappedModel, config.market, config.language, config.postalCode, config.region);
+    const composedURL = URL + '?query=' + JSON.stringify(teslaV4ApiQuery);
+    constructedUrls.push(composedURL);
+  });
+
+  for (const url of constructedUrls) {
+    try {
+      const response = await axios.get(url, { headers: {'User-Agent':'Mozilla/5.0'}, timeout: 5000 });
+      const inventory = response.data.results;
+
+      if (config.vins.length === 0) {
+        logErrorMessage("fetchCpoData", "No VINs to monitor.");
+        return [];
+      }
+
+      const vehicles = inventory.map((veh) => {
+        if (config.vins.includes(veh.VIN)) {
+          return {
+            VIN: veh.VIN,
+            price: veh.TotalPrice,
+            model: veh.Model,
+          };
+        }
+      }).filter(Boolean); // Remove undefined entries
+
+      logMessage("fetchCpoData", `Fetched ${vehicles.length} matching vehicles from Tesla CPO API.`);
+      logMessage("fetchCpoData", `Matched Vehicles: ${JSON.stringify(vehicles)}`);
+
+      // Send test notification with results
+      if (config.test_notification) {
+        if (vehicles.length > 0) {
+          config.devices_to_notify.forEach((device) => {
+            sendNotification(
+              device,
+              `Matched ${vehicles.length} vehicle(s) from Tesla CPO Inventory API - ${vehicles[0].model}.\nDisable 'Test Notification' in the addon's configuration to stop these messages.`,
+            );
+          });
+        } else {
+          config.devices_to_notify.forEach((device) => {
+            sendNotification(
+              device,
+              `No matched vehicles from Tesla CPO Inventory API.\nDisable 'Test Notification' in the addon's configuration to stop these messages.`
+            );
+          });
+        }
+      }
+
+      availableVehicles.push(vehicles);
+    } catch (error) {
+      logErrorMessage("fetchCpoData", `Something went wrong: ${error.message}, #error: ${error}`);
       return [];
     }
+  };
 
-    const vehicles = inventory.map((veh) => {
-      if (config.vins.includes(veh.VIN)) {
-        return {
-          VIN: veh.VIN,
-          price: veh.TotalPrice,
-        };
-      }
-    }).filter(Boolean); // Remove undefined entries
-
-    logMessage("fetchCpoData", `Fetched ${vehicles.length} matching vehicles from Tesla CPO API.`);
-    logMessage("fetchCpoData", `Matched Vehicles: ${JSON.stringify(vehicles)}`);
-
-    // Send test notification with results
-    if (config.test_notification) {
-      config.devices_to_notify.forEach((device) => {
-        sendNotification(
-          device,
-          `Fetched ${vehicles.length} matching vehicles from Tesla CPO API.\n\nWant to stop receiving this test notifications? Disbale 'test_notification' in the addon's configuration.`,
-          config.vins[0]
-        );
-        sendNotification(
-          device,
-          `Stop receiving these test notifications by disbaling 'test_notification' in the addon's configuration.`
-        );
-      });
-    }
-
-    return vehicles;
-  } catch (error) {
-    logErrorMessage("fetchCpoData", `Something went wrong: ${error.message}, #error: ${error}`);
-    return [];
-  }
+  return availableVehicles.flat();
 };
 
 // Monitor VIN
 const monitorVins = (config, db) => {
-  const { vins, interval, devices_to_notify: devices } = config;
+  const { vins, interval, models, devices_to_notify: devices } = config;
 
-  if (!vins || !interval || !devices) {
-    logErrorMessage("monitorVins", "Configuration is missing required fields.");
+  if (!vins || !interval || !devices || !models.length) {
+    logErrorMessage("monitorVins", "Configuration is missing a required field.");
     return;
   }
 
@@ -189,7 +231,7 @@ const monitorVins = (config, db) => {
     const vehicles = await fetchCpoData(config);
 
     // Process each vehicle
-    vehicles.forEach(({ VIN, price }) => {
+    vehicles.forEach(({ VIN, price, model }) => {
       db.get("SELECT price FROM vehicle WHERE vin = ?", [VIN], (err, row) => {
         if (err) {
           logErrorMessage("monitorVins", `Database error for VIN ${VIN} (line 124): ${err.message}`);
@@ -202,8 +244,9 @@ const monitorVins = (config, db) => {
             devices.forEach((device) => {
               sendNotification(
                 device,
-                `Tesla VIN ${VIN}: Price changed from $${lastPrice} to $${price}.`,
-                VIN
+                `Tesla ${VIN} (${model}): Price changed from $${lastPrice} to $${price}.`,
+                VIN,
+                model
               );
             });
             db.run(
@@ -259,7 +302,6 @@ const logErrorMessage = (functionName, message) => {
   console.error(consoleColours.red ,`[${currentTime}] [${functionName}] - ERROR - ${message}`);
 };
 
-// Main function
 const main = () => {
   const addOnConfig = loadYamlVersion();
   
@@ -270,10 +312,11 @@ const main = () => {
   logMessage("main", "Found a bug? Report it here: https://github.com/mwood77/ha-tesla-inventory-tracker/issues", true);
   logMessage("main", "===============================================", true);
 
-  const config = loadConfig();
+  const localConfig = loadConfig();
+  globalConfig = localConfig;
   const db = initDb();
 
-  monitorVins(config, db);
+  monitorVins(localConfig, db);
 };
 
 main();
