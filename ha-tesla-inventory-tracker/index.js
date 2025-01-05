@@ -68,7 +68,7 @@ const getMappedModels = (model) => {
 
 const composeTeslaCarListingUrl = (vin, model) => {
     // eslint-disable-next-line
-	return `https://www.tesla.com/${globalConfig.language}_${globalConfig.market}/${getMappedModels(model)}/order/${vin}`;
+	return `https://www.tesla.com/${globalConfig.language}_${globalConfig.market}/${model}/order/${vin}`;
 };
 
 // Send notification via Home Assistant
@@ -85,7 +85,7 @@ const sendNotification = async (device, message, vin, model) => {
 
     if (vin && model) {
         payload = {
-            title: 'Tesla CPO Monitor',
+            title: 'Tesla CPO Inventory Tracker',
             message,
             data: {url: composeTeslaCarListingUrl(vin, model)},
         };
@@ -365,7 +365,7 @@ const main = () => {
     const addOnConfig = loadYamlVersion();
 
     logMessage('main', '===============================================', true);
-    logMessage('main', 'Starting Tesla CPO monitor...', true);
+    logMessage('main', 'Starting Tesla CPO Inventory Tracker...', true);
     logMessage('main', `Version: ${addOnConfig.version}`, true);
     logMessage('main', 'Written by: @mwood77', true);
     logMessage(
