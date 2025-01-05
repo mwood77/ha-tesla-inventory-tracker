@@ -65,11 +65,6 @@ function getMappedModels(model) {
     "cybertruck": "ct"
   };
 
-<<<<<<< HEAD:index.js
-  logErrorMessage("getMappedModels", `Model: ${MODEL_MAPPING[sanitizedUserInput]}`);
-
-=======
->>>>>>> 1701ae6 (0.1.85-rc):ha-tesla-inventory-tracker/index.js
   return MODEL_MAPPING[sanitizedUserInput];
 };
 
@@ -98,11 +93,7 @@ const sendNotification = async (device, message, vin, model) => {
     }
   } else {
     payload = {
-<<<<<<< HEAD:index.js
-      title: "Tesla CPO Monitor",
-=======
       title: "Tesla CPO Inventory Tracker",
->>>>>>> 1701ae6 (0.1.85-rc):ha-tesla-inventory-tracker/index.js
       message
     }
   }
@@ -167,30 +158,14 @@ const fetchCpoData = async (config) => {
   const availableVehicles = [];
   const constructedUrls = [];
 
-<<<<<<< HEAD:index.js
-  // User has selected multiple models...
-  config.models.forEach((model) => {
-
-    console.log("Creating query for: ", model);
-
-    const mappedModel = getMappedModels(model);
-
-=======
   config.models.forEach((model) => {
     logMessage("fetchCpoData", `Creating query for: ${model}`);
     const mappedModel = getMappedModels(model);
->>>>>>> 1701ae6 (0.1.85-rc):ha-tesla-inventory-tracker/index.js
     const teslaV4ApiQuery = composeUrlQuery(mappedModel, config.market, config.language, config.postalCode, config.region);
     const composedURL = URL + '?query=' + JSON.stringify(teslaV4ApiQuery);
     constructedUrls.push(composedURL);
   });
 
-<<<<<<< HEAD:index.js
-  logErrorMessage('constructedUrls', constructedUrls);
-
-  // const composedURL = URL + '?query=' + JSON.stringify(teslaV4ApiQuery);
-=======
->>>>>>> 1701ae6 (0.1.85-rc):ha-tesla-inventory-tracker/index.js
   for (const url of constructedUrls) {
     try {
       const response = await axios.get(url, { headers: {'User-Agent':'Mozilla/5.0'}, timeout: 5000 });
@@ -216,16 +191,6 @@ const fetchCpoData = async (config) => {
 
       // Send test notification with results
       if (config.test_notification) {
-<<<<<<< HEAD:index.js
-        config.devices_to_notify.forEach((device) => {
-          sendNotification(
-            device,
-            `Fetched ${vehicles.length} matching vehicles from Tesla CPO API.\n\nWant to stop receiving this test notifications? Disbale 'test_notification' in the addon's configuration.`,
-            config.vins[0],
-            config.models[0]
-          );
-        });
-=======
         if (vehicles.length > 0) {
           config.devices_to_notify.forEach((device) => {
             sendNotification(
@@ -241,7 +206,6 @@ const fetchCpoData = async (config) => {
             );
           });
         }
->>>>>>> 1701ae6 (0.1.85-rc):ha-tesla-inventory-tracker/index.js
       }
 
       availableVehicles.push(vehicles);
