@@ -31,6 +31,7 @@ const composeUrlQuery = (model, market, language, postalCode, region) => {
             zip: postalCode.trim(),
             range: 0,
             region: region.toUpperCase().trim(),
+            options: {},
         },
         offset: 0,
         count: 100,
@@ -39,6 +40,13 @@ const composeUrlQuery = (model, market, language, postalCode, region) => {
         isFalconDeliverySelectionEnabled: false,
         version: null,
     };
+
+    if (globalConfig.debug) {
+        debugMessage(
+            'composeUrlQuery',
+            `Constructed query parameters: ${JSON.stringify(queryParams)}`,
+        );
+    }
 
     return queryParams;
 };
@@ -50,9 +58,17 @@ const getMappedModels = (model) => {
     if (trimmedModel.includes(' ')) {
         sanitizedUserInput = trimmedModel.split(' ')[1];
 
+        // Handle edge case for "cyber truck"
         if (sanitizedUserInput === 'truck') {
             sanitizedUserInput = 'cybertruck';
         }
+    }
+
+    if (globalConfig.debug) {
+        debugMessage(
+            'getMappedModels',
+            `Sanitized user input: ${sanitizedUserInput}`,
+        );
     }
 
     const MODEL_MAPPING = {
@@ -63,12 +79,28 @@ const getMappedModels = (model) => {
         cybertruck: 'ct',
     };
 
+    if (globalConfig.debug) {
+        debugMessage(
+            'getMappedModels',
+            `Mapped model: ${MODEL_MAPPING[sanitizedUserInput]}`,
+        );
+    }
+
     return MODEL_MAPPING[sanitizedUserInput];
 };
 
 const composeTeslaCarListingUrl = (vin, model) => {
-    // eslint-disable-next-line
-	return `https://www.tesla.com/${globalConfig.language}_${globalConfig.market}/${model}/order/${vin}`;
+    const constructedURL =
+        `https://www.tesla.com/${globalConfig.language}_${globalConfig.market}/${model}/order/${vin}`;
+
+    if (globalConfig.debug) {
+        debugMessage(
+            'composeTeslaCarListingUrl',
+            `constructed URL is: ${constructedURL}`,
+        );
+    }
+
+    return constructedURL;
 };
 
 // Send notification via Home Assistant
@@ -180,6 +212,13 @@ const fetchCpoData = async (config) => {
         constructedUrls.push(composedURL);
     });
 
+    if (config.debug) {
+        debugMessage(
+            'fetchCpoData',
+            `Constructed URLs: ${JSON.stringify(constructedUrls)}`,
+        );
+    }
+
     for (const url of constructedUrls) {
         try {
             const response = await axios.get(url, {
@@ -187,6 +226,20 @@ const fetchCpoData = async (config) => {
                 timeout: 5000,
             });
             const inventory = response.data.results;
+
+            if (config.debug) {
+                const debugVins = inventory.map((veh) => veh.VIN);
+
+                debugMessage(
+                    'fetchCpoData',
+                    `VINs returned from Tesla API: ${JSON.stringify(debugVins)}`,
+                );
+            }
+
+            logMessage(
+                'fetchCpoData',
+                `Tesla API returned ${response.data.total_matches_found} results.`,
+            );
 
             if (config.vins.length === 0) {
                 logErrorMessage('fetchCpoData', 'No VINs to monitor.');
@@ -209,6 +262,7 @@ const fetchCpoData = async (config) => {
                 'fetchCpoData',
                 `Fetched ${vehicles.length} matching vehicles from Tesla CPO API.`,
             );
+
             logMessage(
                 'fetchCpoData',
                 `Matched Vehicles: ${JSON.stringify(vehicles)}`,
@@ -264,6 +318,13 @@ const monitorVins = (config, db) => {
     setInterval(
         async () => {
             const vehicles = await fetchCpoData(config);
+
+            if (config.debug) {
+                debugMessage(
+                    'monitorVins',
+                    `Vehicles to iterate through ${JSON.stringify(vehicles)}`,
+                );
+            }
 
             // Process each vehicle
             vehicles.forEach(({VIN, price, model}) => {
@@ -338,6 +399,14 @@ const monitorVins = (config, db) => {
             });
         },
         interval * 60 * 1000,
+    );
+};
+
+const debugMessage = (functionName, message) => {
+    const currentTime = new Date().toISOString();
+    console.log(
+        consoleColours.yellow,
+        `[${currentTime}] [${functionName}] ${message}`,
     );
 };
 

@@ -1,5 +1,5 @@
 name: 'Tesla CPO Inventory Tracker'
-version: '0.1.95-rc'
+version: '0.1.103-rc'
 slug: 'tesla_cpo_inventory_tracker'
 description: "Monitors Tesla's CPO inventory for specific VIN(s) and sends notifications when a watched inventory item's pricing is changed"
 init: false
@@ -25,6 +25,7 @@ options:
         - 15
     devices_to_notify: null
     test_notification: false
+    debug: false
 schema:
     market: str
     region: str
@@ -38,6 +39,7 @@ schema:
     devices_to_notify:
         - str
     test_notification: bool
+    debug: bool
 url: 'https://github.com/mwood77/ha-tesla-inventory-tracker'
 icon: mdi:car-arrow-right
 
