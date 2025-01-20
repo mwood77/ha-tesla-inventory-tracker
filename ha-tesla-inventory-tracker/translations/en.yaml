@@ -36,3 +36,7 @@ configuration:
         name: Test Notification
         description: >-
             Enable this to send a test notification, on every inventory search, to the devices you've selected to receive notifications.
+    debug:
+        name: Enable Debugging
+        description: >-
+            Enable this to see debug messages in the logs
